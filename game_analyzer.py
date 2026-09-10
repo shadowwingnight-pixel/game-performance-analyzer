@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 
 
+TARGET_FPS = 60
+FPS_WEIGHT = 0.5
+WIN_RATE_WEIGHT = 0.5
+
+
 @dataclass
 class GameSession:
     player: str
@@ -52,6 +57,41 @@ def calculate_win_rate(session):
     return 0
 
 
+def find_best_session(sessions):
+    return max(sessions, key=calculate_win_rate)
+
+
+def find_worst_session(sessions):
+    return min(sessions, key=calculate_win_rate)
+
+
+def calculate_overall_win_rate(sessions):
+    total_wins = sum(session.wins for session in sessions)
+    total_games = sum(session.wins + session.losses for session in sessions)
+
+    if total_games > 0:
+        return (total_wins / total_games) * 100
+    return 0
+
+
+def calculate_overall_score(sessions):
+    average_fps = sum(session.fps for session in sessions) / len(sessions)
+    fps_score = min((average_fps / TARGET_FPS) * 100, 100)
+    win_rate_score = calculate_overall_win_rate(sessions)
+    score = (fps_score * FPS_WEIGHT) + (win_rate_score * WIN_RATE_WEIGHT)
+    return max(0, min(score, 100))
+
+
+def get_performance_rating(score):
+    if score >= 90:
+        return "Excellent"
+    if score >= 75:
+        return "Good"
+    if score >= 50:
+        return "Average"
+    return "Needs Improvement"
+
+
 def print_session_report(session):
     win_rate = calculate_win_rate(session)
 
@@ -65,10 +105,38 @@ def print_session_report(session):
     print("Losses:", session.losses)
     print("Win Rate:", round(win_rate, 2), "%")
 
-    if session.fps >= 60:
+    if session.fps >= TARGET_FPS:
         print("Performance: Good")
     else:
         print("Performance: Needs Improvement")
+
+
+def print_overall_report(sessions):
+    best_session = find_best_session(sessions)
+    worst_session = find_worst_session(sessions)
+    average_fps = sum(session.fps for session in sessions) / len(sessions)
+    overall_win_rate = calculate_overall_win_rate(sessions)
+    overall_score = calculate_overall_score(sessions)
+
+    print("\nOverall Performance")
+    print("=========================")
+    print("Sessions Analyzed:", len(sessions))
+    print("Average FPS:", round(average_fps, 2))
+    print("Overall Win Rate:", round(overall_win_rate, 2), "%")
+    print("Overall Performance Score:", round(overall_score, 2), "/ 100")
+    print("Overall Rating:", get_performance_rating(overall_score))
+
+    print("\nBest Session")
+    print("-------------------------")
+    print("Player:", best_session.player)
+    print("Game:", best_session.game)
+    print("Win Rate:", round(calculate_win_rate(best_session), 2), "%")
+
+    print("\nWorst Session")
+    print("-------------------------")
+    print("Player:", worst_session.player)
+    print("Game:", worst_session.game)
+    print("Win Rate:", round(calculate_win_rate(worst_session), 2), "%")
 
 
 def main():
@@ -89,6 +157,8 @@ def main():
     print("=========================")
     for session in sessions:
         print_session_report(session)
+
+    print_overall_report(sessions)
 
 
 if __name__ == "__main__":
